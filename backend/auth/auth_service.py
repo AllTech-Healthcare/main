@@ -1,12 +1,14 @@
 """Simple JWT-based auth service using FastAPI."""
 from datetime import datetime, timedelta
 from typing import Optional
-
+import os
 from fastapi import Depends, FastAPI, HTTPException, status
 from fastapi.security import OAuth2PasswordRequestForm
 import jwt
 
-SECRET_KEY = "super-secret-key"  # In production, load from env
+SECRET_KEY = os.environ.get("JWT_SECRET_KEY")
+if not SECRET_KEY:
+    raise RuntimeError("JWT_SECRET_KEY environment variable not set")
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 30
 
