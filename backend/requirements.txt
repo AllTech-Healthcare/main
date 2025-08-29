@@ -1,0 +1,8 @@
+fastapi
+pyjwt
+cryptography
+sqlalchemy
+uvicorn
+pytest
+flake8
+python-multipart
