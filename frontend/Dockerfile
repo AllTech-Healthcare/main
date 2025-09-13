@@ -1,19 +1,9 @@
-FROM node:18-alpine
+FROM nginx:alpine
 
-WORKDIR /app
+# Copy custom nginx config if needed
+COPY public/ /usr/share/nginx/html/
 
-# Copy package files
-COPY package*.json ./
+# Copy a simple index.html file
+EXPOSE 80
 
-# Install dependencies
-RUN npm install
-
-# Copy source code
-COPY . .
-
-# Build the app
-RUN npm run build
-
-# Serve the built app
-EXPOSE 3000
-CMD ["npx", "serve", "-s", "build", "-l", "3000"]
+CMD ["nginx", "-g", "daemon off;"]
