@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useMemo, useCallback, useRef, createContext, useContext } from 'react';
-import { Calendar, ChevronRight, AlertTriangle, TrendingDown, Users, MessageCircle, FileText, Settings, Home, User, Clock, CheckCircle, X, Plus, Send, Menu, Bell, ChevronDown, ArrowRight, Shield, Heart, Brain, Activity, Zap, Target, BarChart3, LineChart, TrendingUp, Check } from 'lucide-react';
+import { Calendar, ChevronRight, AlertTriangle, TrendingDown, Users, MessageCircle, FileText, Home, X, Menu, ArrowRight, Shield, Heart, Brain, Activity, Zap, Target, BarChart3, TrendingUp, Check } from 'lucide-react';
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 import axios from 'axios';
-import jwt_decode from 'jwt-decode';
+import { jwtDecode } from 'jwt-decode';
 
 // Constants
 const COLOR_SCHEMES = {
@@ -49,7 +49,7 @@ const AuthProvider = ({ children }) => {
   useEffect(() => {
     if (token) {
       try {
-        const decoded = jwt_decode(token);
+        const decoded = jwtDecode(token);
         if (decoded.exp * 1000 < Date.now()) {
           logout();
         }
@@ -700,7 +700,7 @@ const SymptomsPage = ({ currentScheme, onPageChange }) => {
     const fetchSymptoms = async () => {
       try {
         const res = await axios.get('/symptoms', { headers: { Authorization: `Bearer ${token}` } });
-        setQuestions(questions.map(q => {
+        setQuestions(prevQuestions => prevQuestions.map(q => {
           const ans = res.data.find(s => s.questionId === q.id);
           return ans ? { ...q, answer: ans.answer } : q;
         }));
