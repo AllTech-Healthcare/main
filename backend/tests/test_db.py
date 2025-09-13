@@ -1,6 +1,12 @@
+import os
 from backend.db.models import Base, Patient
 from sqlalchemy import create_engine, text
 from sqlalchemy.orm import sessionmaker
+
+# Set up test environment with proper Fernet key
+from cryptography.fernet import Fernet
+test_key = Fernet.generate_key()
+os.environ["ENCRYPTION_KEY"] = test_key.decode()
 
 
 def test_patient_encryption():

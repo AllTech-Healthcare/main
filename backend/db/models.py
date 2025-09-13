@@ -1,6 +1,6 @@
 """POPIA-compliant data models with encrypted fields for PHI."""
 from sqlalchemy import Column, Integer, LargeBinary
-from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.orm import declarative_base
 from sqlalchemy.types import TypeDecorator
 
 from .encryption import encrypt, decrypt

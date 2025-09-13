@@ -1,4 +1,19 @@
 FROM node:18-alpine
+
 WORKDIR /app
+
+# Copy package files
+COPY package*.json ./
+
+# Install dependencies
+RUN npm install
+
+# Copy source code
 COPY . .
-CMD ["sh", "-c", "echo Frontend placeholder"]
+
+# Build the app
+RUN npm run build
+
+# Serve the built app
+EXPOSE 3000
+CMD ["npx", "serve", "-s", "build", "-l", "3000"]
