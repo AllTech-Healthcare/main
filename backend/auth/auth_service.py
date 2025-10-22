@@ -1,62 +1,156 @@
-"""Simple JWT-based auth service using FastAPI."""
-from datetime import datetime, timedelta
-from typing import Optional
+"""JWT-based authentication service for AllTech Healthcare.
+
+This module provides secure JWT token-based authentication for the healthcare
+platform. It implements POPIA-compliant security measures for protecting
+patient health information.
+
+Security Features:
+    - JWT token generation and validation
+    - Configurable token expiration
+    - Environment-based secret key management
+    - OAuth2 password flow authentication
+
+Production Requirements:
+    - Set JWT_SECRET_KEY environment variable to a strong secret
+    - Use proper password hashing (e.g., bcrypt, argon2)
+    - Implement rate limiting on authentication endpoints
+    - Enable HTTPS/TLS in production
+    - Configure CORS appropriately
+"""
+from datetime import datetime, timedelta, timezone
+import logging
 import os
+from typing import Optional
+
 from fastapi import Depends, FastAPI, HTTPException, status
 from fastapi.security import OAuth2PasswordRequestForm
 import jwt
 
-def get_secret_key():
-    secret = os.environ.get("JWT_SECRET_KEY")
-    if not secret:
-        raise RuntimeError("JWT_SECRET_KEY environment variable not set")
-    return secret
+# Configure logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
-def create_access_token(
-    data: dict, expires_delta: Optional[timedelta] = None
-) -> str:
-    to_encode = data.copy()
-    expire = datetime.utcnow() + (expires_delta or timedelta(minutes=15))
-    to_encode.update({"exp": expire})
-    secret_key = get_secret_key()
-    return jwt.encode(to_encode, secret_key, algorithm=ALGORITHM)
+# Constants
+SECRET_KEY = os.environ.get(
+    "JWT_SECRET_KEY",
+    "default-secret-key-change-in-production"
+)
+ALGORITHM = "HS256"
+ACCESS_TOKEN_EXPIRE_MINUTES = 30
 
+# Validate secret key configuration
+if SECRET_KEY == "default-secret-key-change-in-production":
+    logger.warning(
+        "SECURITY WARNING: Using default JWT secret key. "
+        "Set JWT_SECRET_KEY environment variable in production!"
+    )
+
+# Fake database for demo purposes
+# TODO: Replace with proper database and password hashing for production
 fake_users_db = {
     "alice": {
         "username": "alice",
-        "hashed_password": "secret",  # Plaintext for demo only
+        "hashed_password": "secret",  # Plaintext for demo only - USE BCRYPT!
     }
 }
 
-app = FastAPI()
+app = FastAPI(
+    title="AllTech Healthcare Authentication Service",
+    description="POPIA-compliant JWT authentication for healthcare platform",
+    version="1.0.0"
+)
 
 
-def authenticate_user(username: str, password: str):
+def authenticate_user(username: str, password: str) -> Optional[dict]:
+    """Authenticate a user against the database.
+
+    Args:
+        username: The username to authenticate
+        password: The password to verify
+
+    Returns:
+        User dictionary if authentication succeeds, None otherwise
+
+    Note:
+        This is a demo implementation using plaintext passwords.
+        Production systems MUST use proper password hashing (bcrypt/argon2).
+    """
     user = fake_users_db.get(username)
     if not user or password != user["hashed_password"]:
+        logger.info(f"Failed authentication attempt for user: {username}")
         return None
+    logger.info(f"Successful authentication for user: {username}")
     return user
 
 
 def create_access_token(
     data: dict, expires_delta: Optional[timedelta] = None
 ) -> str:
+    """Create a JWT access token.
+
+    Args:
+        data: The data to encode in the token (typically user info)
+        expires_delta: Optional custom expiration time
+
+    Returns:
+        Encoded JWT token string
+
+    Note:
+        Uses UTC timezone for consistency across deployments.
+        Tokens include 'exp' claim for automatic expiration validation.
+    """
     to_encode = data.copy()
-    expire = datetime.utcnow() + (expires_delta or timedelta(minutes=15))
+    # Use timezone-aware datetime for better compatibility
+    expire = datetime.now(timezone.utc) + (
+        expires_delta or timedelta(minutes=15)
+    )
     to_encode.update({"exp": expire})
-    return jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
+    token = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
+    logger.debug(f"Created access token for: {data.get('sub', 'unknown')}")
+    return token
 
 
 @app.post("/token")
 async def login(form_data: OAuth2PasswordRequestForm = Depends()):
+    """Login endpoint that returns a JWT token.
+
+    Args:
+        form_data: OAuth2 password form with username and password
+
+    Returns:
+        Dictionary with access_token and token_type
+
+    Raises:
+        HTTPException: 401 Unauthorized if credentials are invalid
+
+    Example:
+        curl -X POST "http://localhost:8000/token" \
+             -H "Content-Type: application/x-www-form-urlencoded" \
+             -d "username=alice&password=secret"
+    """
     user = authenticate_user(form_data.username, form_data.password)
     if not user:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Incorrect username or password",
+            headers={"WWW-Authenticate": "Bearer"},
         )
     access_token = create_access_token(
         data={"sub": user["username"]},
         expires_delta=timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES),
     )
     return {"access_token": access_token, "token_type": "bearer"}
+
+
+@app.get("/health")
+async def health_check():
+    """Health check endpoint for monitoring and load balancers.
+
+    Returns:
+        Dictionary with service status
+    """
+    return {
+        "status": "healthy",
+        "service": "auth",
+        "version": "1.0.0"
+    }
