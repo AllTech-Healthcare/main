@@ -48,9 +48,9 @@ if SECRET_KEY == "default-secret-key-change-in-production":
 # Fake database for demo purposes
 # TODO: Replace with proper database and password hashing for production
 fake_users_db = {
-    "alice": {
-        "username": "alice",
-        "hashed_password": "secret",  # Plaintext for demo only - USE BCRYPT!
+    "strillips": {
+        "username": "strillips",
+        "hashed_password": "Diogo20!",  # Plaintext for demo only - USE BCRYPT!
     }
 }
 
