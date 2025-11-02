@@ -49,11 +49,11 @@ const AuthProvider = ({ children }) => {
   useEffect(() => {
     if (token) {
       try {
-        const decoded = jwt_decode(token);
-        if (decoded.exp * 1000 < Date.now()) {
+        const decodedToken = jwt_decode(token);
+        if (decodedToken.exp * 1000 < Date.now()) {
           logout();
         }
-      } catch (err) {
+      } catch (error) {
         logout();
       }
     }
@@ -277,16 +277,16 @@ const LandingPage = ({ currentScheme, onPageChange }) => {
     if (token) onPageChange('dashboard');
   }, [token, onPageChange]);
 
-  const handleAuth = async (e) => {
-    e.preventDefault();
+  const handleAuth = async (event) => {
+    event.preventDefault();
     try {
       const endpoint = isRegister ? '/register' : '/login';
-      const res = await axios.post(endpoint, { email, password });
+      const response = await axios.post(endpoint, { email, password });
       if (!isRegister) {
-        login(res.data.token, res.data.userId);
+        login(response.data.token, response.data.userId);
       }
-    } catch (err) {
-      console.error(err);
+    } catch (error) {
+      console.error(error);
     }
   };
 
@@ -401,8 +401,8 @@ const LandingPage = ({ currentScheme, onPageChange }) => {
       </div>
 
       <form onSubmit={handleAuth} className="mt-8 max-w-md mx-auto">
-        <input type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="Email" className="block w-full mb-2 p-2 bg-gray-800 text-white" />
-        <input type="password" value={password} onChange={e => setPassword(e.target.value)} placeholder="Password" className="block w-full mb-2 p-2 bg-gray-800 text-white" />
+        <input type="email" value={email} onChange={event => setEmail(event.target.value)} placeholder="Email" className="block w-full mb-2 p-2 bg-gray-800 text-white" />
+        <input type="password" value={password} onChange={event => setPassword(event.target.value)} placeholder="Password" className="block w-full mb-2 p-2 bg-gray-800 text-white" />
         <button type="submit" style={{ backgroundColor: currentScheme.primary }} className="w-full py-2 text-white">
           {isRegister ? 'Register' : 'Login'}
         </button>
@@ -427,14 +427,14 @@ const DashboardPage = ({ currentScheme, onPageChange }) => {
     }
     const fetchData = async () => {
       try {
-        const res = await axios.get('/schedule', { headers: { Authorization: `Bearer ${token}` } });
-        const schedule = res.data;
+        const response = await axios.get('/schedule', { headers: { Authorization: `Bearer ${token}` } });
+        const schedule = response.data;
         if (schedule.length > 1) {
           setNextDose(schedule[1].dose);
           setFormattedDate(new Date(schedule[1].date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }));
         }
-      } catch (err) {
-        console.error(err);
+      } catch (error) {
+        console.error(error);
       }
     };
     fetchData();
@@ -699,34 +699,41 @@ const SymptomsPage = ({ currentScheme, onPageChange }) => {
     }
     const fetchSymptoms = async () => {
       try {
-        const res = await axios.get('/symptoms', { headers: { Authorization: `Bearer ${token}` } });
-        setQuestions(questions.map(q => {
-          const ans = res.data.find(s => s.questionId === q.id);
-          return ans ? { ...q, answer: ans.answer } : q;
+        const response = await axios.get('/symptoms', { headers: { Authorization: `Bearer ${token}` } });
+        setQuestions(questions.map(question => {
+          const savedAnswer = response.data.find(symptom => symptom.questionId === question.id);
+          return savedAnswer ? { ...question, answer: savedAnswer.answer } : question;
         }));
-      } catch (err) {
-        console.error(err);
+      } catch (error) {
+        console.error(error);
       }
     };
     fetchSymptoms();
   }, [token, onPageChange]);
 
-  const handleAnswer = (id, answer) => {
-    setQuestions(questions.map(q => q.id === id ? { ...q, answer } : q));
+  const handleAnswer = (questionId, answer) => {
+    setQuestions(questions.map(question => 
+      question.id === questionId ? { ...question, answer } : question
+    ));
   };
 
-  const completion = useMemo(() => {
-    const answered = questions.filter(q => q.answer !== null).length;
-    return Math.round((answered / questions.length) * 100);
+  const completionPercentage = useMemo(() => {
+    const answeredQuestions = questions.filter(question => question.answer !== null).length;
+    return Math.round((answeredQuestions / questions.length) * 100);
   }, [questions]);
 
   const handleSubmit = async () => {
-    if (completion === 100) {
+    if (completionPercentage === 100) {
       try {
-        await axios.post('/symptoms', { answers: questions.map(q => ({ id: q.id, answer: q.answer })) }, { headers: { Authorization: `Bearer ${token}` } });
+        await axios.post('/symptoms', { 
+          answers: questions.map(question => ({ 
+            id: question.id, 
+            answer: question.answer 
+          })) 
+        }, { headers: { Authorization: `Bearer ${token}` } });
         // Reset or notify success
-      } catch (err) {
-        console.error(err);
+      } catch (error) {
+        console.error(error);
       }
     }
   };
@@ -786,13 +793,13 @@ const SymptomsPage = ({ currentScheme, onPageChange }) => {
             <button 
               onClick={handleSubmit}
               className={`px-8 py-4 rounded-xl text-lg font-bold transition-all duration-300 ${
-                completion === 100 
+                completionPercentage === 100 
                   ? 'bg-green-500 text-white hover:bg-green-600' 
                   : 'bg-gray-700 text-gray-400 cursor-not-allowed'
               }`}
-              disabled={completion !== 100}
+              disabled={completionPercentage !== 100}
             >
-              Submit Assessment ({completion}%)
+              Submit Assessment ({completionPercentage}%)
             </button>
           </div>
         </div>
@@ -1185,10 +1192,10 @@ const SchedulePage = ({ currentScheme, onPageChange }) => {
     }
     const fetchSchedule = async () => {
       try {
-        const res = await axios.get('/schedule', { headers: { Authorization: `Bearer ${token}` } });
-        setSchedule(res.data);
-      } catch (err) {
-        console.error(err);
+        const response = await axios.get('/schedule', { headers: { Authorization: `Bearer ${token}` } });
+        setSchedule(response.data);
+      } catch (error) {
+        console.error(error);
       }
     };
     fetchSchedule();
@@ -1208,8 +1215,8 @@ const SchedulePage = ({ currentScheme, onPageChange }) => {
           </LineChart>
         </ResponsiveContainer>
         <ul className="mt-8 space-y-2">
-          {schedule.map((item, idx) => (
-            <li key={idx} className="text-lg">{item.date}: {item.dose}mg</li>
+          {schedule.map((scheduleItem, itemIndex) => (
+            <li key={itemIndex} className="text-lg">{scheduleItem.date}: {scheduleItem.dose}mg</li>
           ))}
         </ul>
       </div>

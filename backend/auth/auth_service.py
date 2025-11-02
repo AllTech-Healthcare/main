@@ -47,7 +47,7 @@ if SECRET_KEY == "default-secret-key-change-in-production":
 
 # Fake database for demo purposes
 # TODO: Replace with proper database and password hashing for production
-fake_users_db = {
+demo_user_credentials = {
     "strillips": {
         "username": "strillips",
         "hashed_password": "Diogo20!",  # Plaintext for demo only - USE BCRYPT!
@@ -75,12 +75,12 @@ def authenticate_user(username: str, password: str) -> Optional[dict]:
         This is a demo implementation using plaintext passwords.
         Production systems MUST use proper password hashing (bcrypt/argon2).
     """
-    user = fake_users_db.get(username)
-    if not user or password != user["hashed_password"]:
+    user_record = demo_user_credentials.get(username)
+    if not user_record or password != user_record["hashed_password"]:
         logger.info(f"Failed authentication attempt for user: {username}")
         return None
     logger.info(f"Successful authentication for user: {username}")
-    return user
+    return user_record
 
 
 def create_access_token(
@@ -99,15 +99,15 @@ def create_access_token(
         Uses UTC timezone for consistency across deployments.
         Tokens include 'exp' claim for automatic expiration validation.
     """
-    to_encode = data.copy()
+    token_payload = data.copy()
     # Use timezone-aware datetime for better compatibility
-    expire = datetime.now(timezone.utc) + (
+    expiration_time = datetime.now(timezone.utc) + (
         expires_delta or timedelta(minutes=15)
     )
-    to_encode.update({"exp": expire})
-    token = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
+    token_payload.update({"exp": expiration_time})
+    encoded_token = jwt.encode(token_payload, SECRET_KEY, algorithm=ALGORITHM)
     logger.debug(f"Created access token for: {data.get('sub', 'unknown')}")
-    return token
+    return encoded_token
 
 
 @app.post("/token")
@@ -128,15 +128,17 @@ async def login(form_data: OAuth2PasswordRequestForm = Depends()):
              -H "Content-Type: application/x-www-form-urlencoded" \
              -d "username=alice&password=secret"
     """
-    user = authenticate_user(form_data.username, form_data.password)
-    if not user:
+    authenticated_user = authenticate_user(
+        form_data.username, form_data.password
+    )
+    if not authenticated_user:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Incorrect username or password",
             headers={"WWW-Authenticate": "Bearer"},
         )
     access_token = create_access_token(
-        data={"sub": user["username"]},
+        data={"sub": authenticated_user["username"]},
         expires_delta=timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES),
     )
     return {"access_token": access_token, "token_type": "bearer"}

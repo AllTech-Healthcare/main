@@ -10,9 +10,9 @@ def get_encryption_key() -> bytes:
     variable and securely stored. Never use the generated key in
     production.
     """
-    key_str = os.environ.get("ENCRYPTION_KEY")
-    if key_str:
-        return key_str.encode()
+    environment_key = os.environ.get("ENCRYPTION_KEY")
+    if environment_key:
+        return environment_key.encode()
 
     # Default key for development only
     # In production, this should raise an error
@@ -22,14 +22,14 @@ def get_encryption_key() -> bytes:
 
 
 ENCRYPTION_KEY = get_encryption_key()
-fernet = Fernet(ENCRYPTION_KEY)
+fernet_cipher = Fernet(ENCRYPTION_KEY)
 
 
 def encrypt(value: str) -> bytes:
     """Encrypt a string value."""
-    return fernet.encrypt(value.encode())
+    return fernet_cipher.encrypt(value.encode())
 
 
 def decrypt(value: bytes) -> str:
     """Decrypt a bytes value to string."""
-    return fernet.decrypt(value).decode()
+    return fernet_cipher.decrypt(value).decode()
