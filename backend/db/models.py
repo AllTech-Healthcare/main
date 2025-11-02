@@ -11,20 +11,20 @@ Base = declarative_base()
 class EncryptedString(TypeDecorator):
     impl = LargeBinary
 
-    def process_bind_param(self, value, dialect):
-        if value is None:
-            return value
-        return encrypt(value)
+    def process_bind_param(self, plaintext_value, dialect):
+        if plaintext_value is None:
+            return plaintext_value
+        return encrypt(plaintext_value)
 
-    def process_result_value(self, value, dialect):
-        if value is None:
-            return value
-        return decrypt(value)
+    def process_result_value(self, encrypted_value, dialect):
+        if encrypted_value is None:
+            return encrypted_value
+        return decrypt(encrypted_value)
 
 
 class Patient(Base):
     __tablename__ = "patients"
 
-    id = Column(Integer, primary_key=True)
-    name = Column(EncryptedString, nullable=False)
-    phone = Column(EncryptedString, nullable=False)
+    patient_id = Column(Integer, primary_key=True)
+    patient_name = Column(EncryptedString, nullable=False)
+    phone_number = Column(EncryptedString, nullable=False)

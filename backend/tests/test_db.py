@@ -4,22 +4,22 @@ from sqlalchemy.orm import sessionmaker
 
 
 def test_patient_encryption():
-    engine = create_engine("sqlite:///:memory:")
-    Session = sessionmaker(bind=engine)
-    Base.metadata.create_all(engine)
-    session = Session()
+    database_engine = create_engine("sqlite:///:memory:")
+    SessionFactory = sessionmaker(bind=database_engine)
+    Base.metadata.create_all(database_engine)
+    database_session = SessionFactory()
 
-    patient = Patient(name="Alice", phone="12345")
-    session.add(patient)
-    session.commit()
+    test_patient = Patient(patient_name="Alice", phone_number="12345")
+    database_session.add(test_patient)
+    database_session.commit()
 
-    fetched = session.query(Patient).first()
-    assert fetched.name == "Alice"
+    retrieved_patient = database_session.query(Patient).first()
+    assert retrieved_patient.patient_name == "Alice"
 
     # verify stored value is encrypted
-    result = session.execute(
-        text("SELECT name FROM patients WHERE id=:id"),
-        {"id": fetched.id},
+    query_result = database_session.execute(
+        text("SELECT patient_name FROM patients WHERE patient_id=:patient_id"),
+        {"patient_id": retrieved_patient.patient_id},
     )
-    raw = result.fetchone()[0]
-    assert raw != b"Alice"
+    encrypted_raw_value = query_result.fetchone()[0]
+    assert encrypted_raw_value != b"Alice"
